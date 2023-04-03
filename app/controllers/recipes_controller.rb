@@ -1,20 +1,30 @@
 class RecipesController < ApplicationController
+    before_action :authorize
 
-    # Recipe list.
-    def index
-        render json: Recipe.all
-    end
+    def index 
+        user = User.find_by(id: session[:user_id])
+        recipes = Recipe.all 
+        render json: recipes, status: :created
+    end 
 
-    # Recipe creation.
     def create
-        recipe = @current_user.recipes.create!(recipe_params)
-        render json: recipe, status: :created
-    end
+        @user = User.find_by(id: session[:user_id])
+        recipe = Recipe.create(recipe_params.merge({user_id: @user.id}))
+        # recipe.user_id = @user.id
+        if recipe.valid?
+            render json: recipe, status: :created
+        else
+            render json: { errors: recipe.errors.full_messages }, status: :unprocessable_entity
+        end 
+    end 
 
-    private
+    private 
+
+    def authorize
+        return render json: { errors: ["Not authorized"] }, status: :unauthorized unless session.include? :user_id
+    end
 
     def recipe_params
         params.permit(:title, :instructions, :minutes_to_complete)
-    end
-
+    end 
 end
